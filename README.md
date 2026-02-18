@@ -7,6 +7,19 @@ A lightweight, offline-first Trusted AI governance toolkit aligned to four works
 - Workstream C: Security/Red Teaming, Monitoring, and Incident Response
 - Workstream D: Documentation Templates and Artifact Repository Structure
 
+## Inspiration and References
+
+- AIF360 (fairness and bias evaluation patterns): https://github.com/Trusted-AI/AIF360
+
+See `DESIGN_NOTES.md` for how this repository maps inspiration patterns into local modules, and `ATTRIBUTION.md` for public reuse guidance.
+
+Current AIF360-inspired implementations:
+- Statistical Parity Difference (SPD) fairness metric
+- Disparate Impact Ratio (DIR) fairness metric
+- Equal Opportunity Difference (EOD) fairness metric
+- Average Odds Difference (AOD) fairness metric
+- Fairness threshold presentation in scorecards
+
 ## Quickstart
 
 ```bash
@@ -19,10 +32,7 @@ tat run prompt --config config.yaml --prompt "Summarize the policy update."
 ```
 
 
-## Open Scorecard:
-```
-open artifacts/$RUN_ID/*.html
-```
+
 ## Core Commands
 
 ```bash
@@ -40,7 +50,11 @@ tat docs build --config config.yaml
 tat monitor summarize --config config.yaml
 tat incident generate --config config.yaml
 ```
-
+## Open Scorecard:
+```
+export RUN_ID=$(ls -1t artifacts | head -n 1)
+open artifacts/$RUN_ID/scorecard.html
+```
 ## Evidence Pack Outputs
 
 Each run writes to `artifacts/<run_id>/` and includes:
@@ -57,3 +71,4 @@ Each run writes to `artifacts/<run_id>/` and includes:
 - Adapter contracts include future support for Azure OpenAI.
 - Golden suites include 50+ deterministic test cases across low, medium, and high tiers.
 - Red-team suite includes 20 deterministic security cases.
+- This repository is public-facing and designed to allow referenced inspiration patterns with explicit attribution.
