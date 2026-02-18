@@ -1,0 +1,14 @@
+# Generated run outputs
+artifacts/
+
+# Python caches
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Build/package metadata
+*.egg-info/
+
+# macOS/Office temp files
+.DS_Store
+~$*.docx
