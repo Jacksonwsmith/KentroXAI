@@ -12,3 +12,4 @@ __pycache__/
 # macOS/Office temp files
 .DS_Store
 ~$*.docx
+.venv/
