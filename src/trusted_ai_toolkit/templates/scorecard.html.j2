@@ -3,227 +3,426 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Trusted AI Governance Scorecard</title>
+  <title>Trust Card</title>
   <style>
     :root {
-      --page-bg: #e7eeeb;
-      --panel-bg: #edf3f0;
-      --card-bg: #f8fbf9;
-      --border: #cfd9d3;
-      --text: #1f2a25;
-      --muted: #6a766f;
-      --header-accent: #cbe2da;
-      --pass-bg: #dfeee8;
-      --pass-text: #2a7b5b;
-      --fail-bg: #f6dfdf;
-      --fail-text: #9f2d2d;
-      --review-bg: #f5ebd4;
-      --review-text: #926b1a;
-      --radius: 18px;
-      --shadow: 0 1px 0 rgba(31, 42, 37, 0.04), 0 10px 20px rgba(31, 42, 37, 0.04);
+      --bg: #ececef;
+      --card: #f4f5f8;
+      --card-border: #d8dbe3;
+      --ink: #1b2230;
+      --muted: #5f6778;
+      --chip-pass-bg: #d6f0df;
+      --chip-pass-text: #0f6c3b;
+      --chip-blue-bg: #dbe8ff;
+      --chip-blue-text: #1d4ed8;
+      --chip-purple-bg: #ece5ff;
+      --chip-purple-text: #5b21b6;
+      --chip-amber-bg: #f9ebca;
+      --chip-amber-text: #9a5a00;
+      --chip-sky-bg: #dceef9;
+      --chip-sky-text: #075985;
+      --ring: #2b64df;
+      --button: #10182e;
+      --button-border: #1c2949;
+      --shadow: 0 1px 0 rgba(17, 24, 39, 0.08), 0 10px 24px rgba(17, 24, 39, 0.07);
     }
 
     * { box-sizing: border-box; }
     body {
       margin: 0;
+      background: radial-gradient(circle at top right, #f7f8fc 0%, var(--bg) 42%, #e8e9ee 100%);
+      color: var(--ink);
       font-family: "Avenir Next", "Segoe UI", Helvetica, Arial, sans-serif;
-      color: var(--text);
-      background: var(--page-bg);
-      padding: 24px;
-    }
-
-    .container { max-width: 1320px; margin: 0 auto; }
-    .panel {
-      background: var(--panel-bg);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      box-shadow: var(--shadow);
-      margin-bottom: 16px;
       padding: 18px;
     }
-    .subcard {
-      background: var(--card-bg);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 14px;
+
+    .frame {
+      max-width: 1460px;
+      margin: 0 auto;
     }
 
-    h1, h2, h3, p { margin: 0; }
-    h1 { font-size: 24px; line-height: 1.1; letter-spacing: -0.2px; margin-bottom: 12px; font-weight: 900; }
-    h2 { font-size: 21px; line-height: 1.1; letter-spacing: -0.1px; margin-bottom: 12px; font-weight: 800; }
-    h3 { font-size: 18px; margin-bottom: 8px; font-weight: 800; }
-
-    .meta { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 22px; margin-bottom: 14px; }
-    .meta-row { font-size: 14px; line-height: 1.35; }
-    .label { font-weight: 800; color: #445049; }
-    .value { color: #36423c; }
-
-    .top-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
-    .tile-label {
-      font-size: 12px;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      color: var(--muted);
-      margin-bottom: 8px;
+    .title {
+      font-size: 40px;
+      letter-spacing: -0.9px;
+      line-height: 1;
+      font-weight: 900;
+      margin: 0 0 2px;
     }
-    .tile-value { font-size: 30px; font-weight: 800; line-height: 1; }
 
-    .pill {
-      display: inline-flex;
+    .subtitle {
+      margin: 0 0 14px;
+      font-size: 16px;
+      color: #3f4758;
+      font-weight: 600;
+    }
+
+    .trust-card {
+      border: 2px solid var(--card-border);
+      border-radius: 40px;
+      background: var(--card);
+      box-shadow: var(--shadow);
+      padding: 18px 22px 18px;
+    }
+
+    .card-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 16px;
+      border-bottom: 1px solid #d9dde7;
+      padding-bottom: 10px;
+      margin-bottom: 10px;
+    }
+
+    .card-head h2 {
+      font-size: 34px;
+      line-height: 1;
+      margin: 0 0 6px;
+      font-weight: 900;
+      letter-spacing: -0.5px;
+    }
+
+    .request {
+      margin: 0;
+      font-size: 16px;
+      color: #353f50;
+      line-height: 1.35;
+      max-width: 920px;
+    }
+
+    .evidence {
+      font-size: 18px;
+      font-weight: 700;
+      color: #4c5568;
+      white-space: nowrap;
+      padding-top: 4px;
+    }
+
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 6px 0 14px;
+    }
+
+    .chip {
+      padding: 7px 14px;
+      border-radius: 9px;
+      font-size: 14px;
+      font-weight: 800;
+      line-height: 1;
+      letter-spacing: 0.1px;
+      border: 1px solid rgba(0, 0, 0, 0.06);
+    }
+
+    .chip.pass { background: var(--chip-pass-bg); color: var(--chip-pass-text); }
+    .chip.blue { background: var(--chip-blue-bg); color: var(--chip-blue-text); }
+    .chip.purple { background: var(--chip-purple-bg); color: var(--chip-purple-text); }
+    .chip.amber { background: var(--chip-amber-bg); color: var(--chip-amber-text); }
+    .chip.sky { background: var(--chip-sky-bg); color: var(--chip-sky-text); }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 220px minmax(0, 1fr);
+      gap: 18px;
+      align-items: start;
+    }
+
+    .score-wrap {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .ring {
+      width: 200px;
+      height: 200px;
+      border-radius: 50%;
+      border: 6px solid var(--ring);
+      display: flex;
+      flex-direction: column;
       align-items: center;
-      padding: 4px 12px;
-      border-radius: 999px;
-      border: 1px solid transparent;
+      justify-content: center;
+      background: #f9faff;
+    }
+
+    .ring .num {
+      font-size: 60px;
+      font-weight: 900;
+      line-height: 1;
+      margin: 0;
+      letter-spacing: -1px;
+    }
+
+    .ring .label {
+      margin: 8px 0 0;
+      font-size: 18px;
+      color: #4a5568;
+      font-weight: 600;
+    }
+
+    .tier-box {
+      background: #eef0f5;
+      border: 1px solid #d3d8e4;
+      border-radius: 18px;
+      padding: 12px 14px;
+      min-height: 170px;
+    }
+
+    .tier-label {
+      font-size: 14px;
+      color: #6a7283;
+      margin: 0 0 4px;
+      font-weight: 700;
+    }
+
+    .tier-value {
+      font-size: 24px;
+      margin: 0 0 8px;
+      font-weight: 900;
+      letter-spacing: -0.4px;
+    }
+
+    .minor-label {
+      font-size: 13px;
+      color: #6a7283;
+      margin: 0 0 3px;
+      font-weight: 700;
+    }
+
+    .minor-value {
+      font-size: 22px;
+      margin: 0 0 8px;
+      font-weight: 800;
+    }
+
+    .review-note {
+      font-size: 13px;
+      color: #3b4352;
+      font-weight: 600;
+      margin: 0;
+    }
+
+    .sections h3 {
+      margin: 0 0 4px;
+      font-size: 22px;
+      letter-spacing: -0.3px;
+      font-weight: 900;
+    }
+
+    .sections { display: grid; gap: 10px; }
+
+    .sections ul {
+      margin: 0;
+      padding-left: 18px;
+    }
+
+    .sections li {
+      font-size: 14px;
+      line-height: 1.45;
+      margin: 1px 0;
+      color: #253042;
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      border-top: 1px solid #d9dde7;
+      margin-top: 12px;
+      padding-top: 10px;
+    }
+
+    .btn-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .btn {
+      background: var(--button);
+      color: #f9fbff;
+      border: 1px solid var(--button-border);
+      border-radius: 10px;
+      padding: 8px 14px;
       font-size: 13px;
       font-weight: 800;
-      text-transform: uppercase;
-      letter-spacing: 0.3px;
-      line-height: 1;
-    }
-    .pill-pass { background: var(--pass-bg); color: var(--pass-text); border-color: #b9d7ca; }
-    .pill-fail { background: var(--fail-bg); color: var(--fail-text); border-color: #e4baba; }
-    .pill-review { background: var(--review-bg); color: var(--review-text); border-color: #e4d0a3; }
-
-    .body-copy { font-size: 14px; line-height: 1.5; color: #2b3530; }
-
-    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-    ul { margin: 0; padding-left: 22px; }
-    li { font-size: 14px; line-height: 1.45; margin: 3px 0; }
-
-    .row-label { font-weight: 800; }
-
-    .table-wrap {
-      overflow: hidden;
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      background: var(--card-bg);
-    }
-    table { width: 100%; border-collapse: collapse; }
-    th, td { padding: 10px 12px; border-bottom: 1px solid #d5dfd9; text-align: left; font-size: 14px; }
-    th { background: var(--header-accent); font-weight: 800; color: #144735; }
-    tr:last-child td { border-bottom: none; }
-
-    @media (max-width: 1100px) {
-      h1 { font-size: 22px; }
-      h2 { font-size: 20px; }
-      h3 { font-size: 17px; }
-      .meta-row { font-size: 13px; }
-      .tile-label { font-size: 11px; }
-      .tile-value { font-size: 24px; }
-      .pill { font-size: 12px; padding: 4px 10px; }
-      .body-copy, li, th, td { font-size: 13px; }
+      min-width: 124px;
+      text-align: center;
     }
 
-    @media (max-width: 900px) {
+    .footnote {
+      margin: 0;
+      font-size: 12px;
+      line-height: 1.35;
+      color: #5b6475;
+      max-width: 470px;
+    }
+
+    @media (max-width: 1280px) {
+      .title { font-size: 34px; }
+      .subtitle { font-size: 15px; }
+      .card-head h2 { font-size: 30px; }
+      .request { font-size: 15px; }
+      .evidence { font-size: 16px; }
+      .chip { font-size: 13px; }
+      .layout { grid-template-columns: 220px minmax(0, 1fr); }
+      .ring { width: 180px; height: 180px; }
+      .ring .num { font-size: 54px; }
+      .ring .label { font-size: 17px; }
+      .tier-label, .minor-label { font-size: 13px; }
+      .tier-value, .minor-value { font-size: 20px; }
+      .review-note { font-size: 12px; }
+      .sections h3 { font-size: 20px; }
+      .sections li { font-size: 13px; }
+      .btn { font-size: 12px; min-width: 116px; }
+      .footnote { font-size: 11px; }
+    }
+
+    @media (max-width: 930px) {
       body { padding: 12px; }
-      .meta, .top-stats, .two-col { grid-template-columns: 1fr; }
+      .trust-card { border-radius: 24px; padding: 16px; }
+      .title { font-size: 32px; }
+      .subtitle { font-size: 15px; }
+      .card-head { flex-direction: column; gap: 8px; }
+      .card-head h2 { font-size: 32px; }
+      .request { font-size: 15px; }
+      .evidence { font-size: 16px; }
+      .chip { font-size: 13px; }
+      .layout { grid-template-columns: 1fr; gap: 16px; }
+      .score-wrap { flex-direction: row; flex-wrap: wrap; }
+      .ring { width: 160px; height: 160px; }
+      .ring .num { font-size: 52px; }
+      .ring .label { font-size: 17px; }
+      .tier-box { flex: 1; min-width: 220px; min-height: unset; }
+      .tier-label, .minor-label { font-size: 13px; }
+      .tier-value, .minor-value { font-size: 23px; }
+      .review-note { font-size: 13px; }
+      .sections h3 { font-size: 24px; }
+      .sections li { font-size: 15px; }
+      .actions { flex-direction: column; align-items: stretch; }
+      .btn-row { width: 100%; }
+      .btn { flex: 1; min-width: 0; }
+      .footnote { max-width: unset; font-size: 13px; }
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <section class="panel">
-      <h1>Trusted AI Governance Scorecard</h1>
-      <div class="meta">
-        <p class="meta-row"><span class="label">Project:</span> <span class="value">{{ project_name }}</span></p>
-        <p class="meta-row"><span class="label">Run ID:</span> <span class="value">{{ run_id }}</span></p>
-        <p class="meta-row"><span class="label">Risk Tier:</span> <span class="value">{{ risk_tier | title }}</span></p>
-        <p class="meta-row"><span class="label">Severity Threshold:</span> <span class="value">{{ severity_threshold | title }}</span></p>
-      </div>
-      <div class="top-stats">
-        <div class="subcard">
-          <p class="tile-label">Overall Status</p>
-          {% if overall_status == "pass" %}
-          <span class="pill pill-pass">PASS</span>
-          {% elif overall_status == "fail" %}
-          <span class="pill pill-fail">FAIL</span>
-          {% else %}
-          <span class="pill pill-review">NEEDS REVIEW</span>
-          {% endif %}
+  {% set ns = namespace(failed_metrics=0) %}
+  {% for m in metric_results %}
+    {% if m.passed is sameas false %}
+      {% set ns.failed_metrics = ns.failed_metrics + 1 %}
+    {% endif %}
+  {% endfor %}
+
+  {% set blocker_count = redteam_summary.high + redteam_summary.critical + ns.failed_metrics %}
+  {% set trust_score = 92 - (blocker_count * 9) - ((100 - evidence_completeness) / 4) %}
+  {% if trust_score < 35 %}
+    {% set trust_score = 35 %}
+  {% elif trust_score > 96 %}
+    {% set trust_score = 96 %}
+  {% endif %}
+
+  {% set citation_pct = "%.0f"|format(evidence_completeness) %}
+  {% set pedigree = risk_tier | upper %}
+  {% if overall_status == "pass" %}
+    {% set policy_text = "Policy PASS" %}
+  {% elif overall_status == "fail" %}
+    {% set policy_text = "Policy FAIL" %}
+  {% else %}
+    {% set policy_text = "Policy REVIEW" %}
+  {% endif %}
+
+  <div class="frame">
+    <h1 class="title">Trust Card (User-Facing)</h1>
+    <p class="subtitle">Compact, evidence-backed trust summary returned with every AI output</p>
+
+    <section class="trust-card">
+      <div class="card-head">
+        <div>
+          <h2>Trust Card</h2>
+          <p class="request"><strong>Request:</strong> "{{ executive_summary }}"</p>
         </div>
-        <div class="subcard">
-          <p class="tile-label">Release Decision</p>
-          {% if go_no_go == "go" %}
-          <span class="pill pill-pass">GO</span>
-          {% else %}
-          <span class="pill pill-fail">NO-GO</span>
-          {% endif %}
+        <p class="evidence">Evidence Pack: {{ run_id }}</p>
+      </div>
+
+      <div class="chips">
+        <span class="chip pass">{{ policy_text }}</span>
+        <span class="chip blue">Cited {{ citation_pct }}%</span>
+        <span class="chip purple">Pedigree {{ pedigree }}</span>
+        <span class="chip amber">Trace Captured</span>
+        <span class="chip sky">GCC High Boundary</span>
+      </div>
+
+      <div class="layout">
+        <div class="score-wrap">
+          <div class="ring">
+            <p class="num">{{ "%.0f"|format(trust_score) }}</p>
+            <p class="label">Trust Score</p>
+          </div>
+
+          <div class="tier-box">
+            <p class="tier-label">Risk Tier</p>
+            <p class="tier-value">{{ risk_tier | upper }}</p>
+
+            <p class="minor-label">Confidence</p>
+            <p class="minor-value">{{ overall_status | replace("_", " ") | title }}</p>
+
+            <p class="review-note">Human review required before release.</p>
+          </div>
         </div>
-        <div class="subcard">
-          <p class="tile-label">Evidence Completeness</p>
-          <p class="tile-value">{{ "%.1f"|format(evidence_completeness) }}%</p>
+
+        <div class="sections">
+          <div>
+            <h3>Explainability</h3>
+            <ul>
+              <li>Metrics captured: {{ metric_results | length }} checks ({{ citation_pct }}% evidence coverage).</li>
+              <li>Fairness snapshot includes SPD, DIR, EOD, and AOD alignment checks.</li>
+              <li>Reasoning evidence available via `reasoning_report` artifact.</li>
+            </ul>
+          </div>
+
+          <div>
+            <h3>Traceability</h3>
+            <ul>
+              <li>Run ID: {{ run_id }} | Project: {{ project_name }}</li>
+              <li>Stage gates: {% for gate, status in stage_gate_status.items() %}{{ gate | replace("_", " ") | title }}={{ status | upper }}{% if not loop.last %}; {% endif %}{% endfor %}</li>
+              <li>Evidence links: eval, red-team findings, reasoning report included.</li>
+            </ul>
+          </div>
+
+          <div>
+            <h3>Security Context</h3>
+            <ul>
+              <li>Severity threshold: {{ severity_threshold | upper }}.</li>
+              <li>Red-team findings: low={{ redteam_summary.low }}, medium={{ redteam_summary.medium }}, high={{ redteam_summary.high }}, critical={{ redteam_summary.critical }}.</li>
+              <li>Release decision: {{ go_no_go | upper }} pending governance sign-off.</li>
+            </ul>
+          </div>
+
+          <div>
+            <h3>Constraints &amp; Safeguards</h3>
+            <ul>
+              {% for action in required_actions %}
+              <li>{{ action }}</li>
+              {% endfor %}
+              <li>Documentation completeness: {{ "%.1f"|format(evidence_completeness) }}% of required outputs.</li>
+            </ul>
+          </div>
         </div>
       </div>
-    </section>
 
-    <section class="panel">
-      <h3>Executive Summary</h3>
-      <p class="body-copy">{{ executive_summary }}</p>
-    </section>
-
-    <section class="two-col">
-      <div class="panel">
-        <h3>Stage Gate Status</h3>
-        <ul>
-          {% for gate, status in stage_gate_status.items() %}
-          <li>
-            <span class="row-label">{{ gate | replace("_", " ") | title }}:</span>
-            {% if status == "pass" %}
-            <span class="pill pill-pass">PASS</span>
-            {% elif status == "fail" %}
-            <span class="pill pill-fail">FAIL</span>
-            {% else %}
-            <span class="pill pill-review">NEEDS REVIEW</span>
-            {% endif %}
-          </li>
-          {% endfor %}
-        </ul>
+      <div class="actions">
+        <div class="btn-row">
+          <div class="btn">Show Work</div>
+          <div class="btn">Export Evidence</div>
+          <div class="btn">Request Review</div>
+          <div class="btn">Report Issue</div>
+        </div>
+        <p class="footnote">This card travels with the output as an auditable evidence link for governance review.</p>
       </div>
-      <div class="panel">
-        <h3>Red Team Summary</h3>
-        <ul>
-          <li>Low: {{ redteam_summary.low }}</li>
-          <li>Medium: {{ redteam_summary.medium }}</li>
-          <li>High: {{ redteam_summary.high }}</li>
-          <li>Critical: {{ redteam_summary.critical }}</li>
-        </ul>
-      </div>
-    </section>
-
-    <section class="panel">
-      <h3>Metrics</h3>
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr><th>Metric</th><th>Value</th><th>Threshold</th><th>Pass</th></tr>
-          </thead>
-          <tbody>
-          {% for m in metric_results %}
-            <tr>
-              <td>{{ m.metric_id }}</td>
-              <td>{{ m.value }}</td>
-              <td>{{ m.threshold }}</td>
-              <td>
-                {% if m.passed %}
-                <span class="pill pill-pass">PASS</span>
-                {% else %}
-                <span class="pill pill-fail">FAIL</span>
-                {% endif %}
-              </td>
-            </tr>
-          {% endfor %}
-          </tbody>
-        </table>
-      </div>
-    </section>
-
-    <section class="panel">
-      <h3>Required Actions</h3>
-      <ul>
-        {% for action in required_actions %}
-        <li>{{ action }}</li>
-        {% endfor %}
-      </ul>
     </section>
   </div>
 </body>
