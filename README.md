@@ -64,6 +64,20 @@ Each run writes to `artifacts/<run_id>/` and includes:
 - Workstream C: `redteam_findings.json`, `redteam_summary.json`, `monitoring_summary.json`, `incident_report.md` (when triggered)
 - Workstream D: `system_card.md`, `data_card.md`, `model_card.md`, `artifact_manifest.json`, `artifact_manifest.md`
 - Shared: `prompt_run.json`, `telemetry.jsonl`
+  
+## Red-Team & Monitoring Vertical Slice
+
+A configuration-driven red-team vertical slice has been implemented under:
+
+`tests/redteam/`
+
+This demonstrates deterministic adversarial validation, artifact persistence, and telemetry instrumentation.
+
+Example execution:
+
+```bash
+tat redteam run --config config_rt01.yaml
+tat redteam run --config config_rt03.yaml
 
 ## Notes
 
