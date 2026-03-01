@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 from trusted_ai_toolkit.artifacts import ArtifactStore
 from trusted_ai_toolkit.reporting import generate_scorecard
 from trusted_ai_toolkit.schemas import ToolkitConfig
+from tat.schemas import SystemSpec
 
 
 def test_reporting_generates_scorecard_with_stage_gates(tmp_path: Path) -> None:
@@ -45,5 +47,98 @@ def test_reporting_generates_scorecard_with_stage_gates(tmp_path: Path) -> None:
     assert scorecard.overall_status in {"fail", "needs_review"}
     assert scorecard.go_no_go == "no-go"
     assert "redteam" in scorecard.stage_gate_status
+    assert scorecard.trust_score is None
+    assert scorecard.control_results == []
     assert store.path_for("scorecard.md").exists()
     assert store.path_for("scorecard.html").exists()
+
+
+def test_reporting_writes_computed_scores_and_system_context(tmp_path: Path) -> None:
+    cfg = ToolkitConfig(
+        project_name="demo",
+        risk_tier="medium",
+        output_dir=str(tmp_path / "artifacts"),
+        system=SystemSpec.model_validate(
+            {
+                "created_at": "2026-03-01T12:00:00Z",
+                "system_id": "agent-risk-gateway",
+                "system_name": "Agent Risk Gateway",
+                "version": "1.0.0",
+                "model_provider": "OpenAI",
+                "model_name": "gpt-4.1",
+                "model_version": "2026-02-15",
+                "environment": "production",
+                "risk_level": "high",
+                "compliance_profile": "regulated",
+                "telemetry_level": "enhanced",
+                "deployment_region": "us-east-1",
+                "owner": "ai-governance",
+                "metadata": {
+                    "intended_use": "Summarize governance controls",
+                    "limitations": "May require human escalation",
+                    "change_ticket": "GRC-2048",
+                    "data_classification": "confidential",
+                },
+            }
+        ),
+    )
+    store = ArtifactStore(output_dir=cfg.output_dir, run_id="run10")
+
+    store.write_json(
+        "redteam_findings.json",
+        [
+            {
+                "case_id": "low-pass",
+                "severity": "low",
+                "passed": True,
+                "evidence": "ok",
+                "recommendation": "none",
+                "tags": [],
+            },
+            {
+                "case_id": "critical-fail",
+                "severity": "critical",
+                "passed": False,
+                "evidence": "bad",
+                "recommendation": "fix",
+                "tags": [],
+            },
+        ],
+    )
+
+    scorecard = generate_scorecard(cfg, store)
+    payload = json.loads(store.path_for("scorecard.json").read_text(encoding="utf-8"))
+
+    assert scorecard.pillar_scores == {
+        "security": 0.75,
+        "reliability": 1.0,
+        "transparency": 1.0,
+        "governance": 1.0,
+    }
+    assert scorecard.trust_score == 0.9375
+    assert scorecard.risk_tier == "Tier 1"
+    assert scorecard.deployment_risk_tier == "medium"
+    assert scorecard.system_context is not None
+    assert payload["system_context"] == scorecard.system_context
+    assert payload["pillar_scores"] == scorecard.pillar_scores
+    assert payload["trust_score"] == 0.9375
+    assert payload["risk_tier"] == "Tier 1"
+    assert len(payload["control_results"]) == 12
+    assert payload["redteam_summary"]["pass_rate"] == 0.5
+    assert payload["redteam_summary"]["critical_fail_count"] == 1
+    scorecard_md = store.path_for("scorecard.md").read_text(encoding="utf-8")
+    assert "**Risk Tier:** Medium" in scorecard_md
+    assert "**Decision Tier:** Tier 1" in scorecard_md
+    assert "## Pillar Scores" in scorecard_md
+    assert "- Security: 0.75" in scorecard_md
+    scorecard_html = store.path_for("scorecard.html").read_text(encoding="utf-8")
+    assert "Click for pillar breakdown" in scorecard_html
+    assert "Pillar Breakdown" in scorecard_html
+    assert "Click each pillar to see the formula, weighting, and trust-score contribution." in scorecard_html
+    assert "Weighted contribution to trust score: 0.1875" in scorecard_html
+    assert "50% control pass rate + 50% red-team pass rate." in scorecard_html
+    assert "Evidence 7%" in scorecard_html
+    assert "System Trace On" in scorecard_html
+    assert "Critical Fails 1" in scorecard_html
+    assert "Metrics captured: 0 total, 0 passed, 0 failed." in scorecard_html
+    assert "Reasoning evidence available: No." in scorecard_html

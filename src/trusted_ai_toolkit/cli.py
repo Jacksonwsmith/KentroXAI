@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 from typing import Optional
 from uuid import uuid4
+import webbrowser
 
 import typer
 import yaml
@@ -158,6 +159,100 @@ def _incident_for_run(config: ToolkitConfig, store: ArtifactStore, monitoring: M
     return True
 
 
+def _run_prompt_workflow(
+    cfg: ToolkitConfig,
+    config_path: str,
+    prompt: str,
+    model_output: Optional[str] = None,
+    context_file: Optional[str] = None,
+) -> Path:
+    """Run the end-to-end prompt workflow and return the artifact directory."""
+
+    run_context = _build_run_context(cfg, _resolve_run_id(cfg))
+    store, telemetry = _build_store_and_telemetry(cfg, run_context)
+
+    retrieved_contexts = _load_retrieved_contexts(context_file)
+
+    resolved_output = model_output or (
+        "Stub model response: real provider integration is pending. "
+        "TODO: connect Azure OpenAI or another model endpoint."
+    )
+
+    telemetry.log_event("RUN_STARTED", "orchestration", {"config": config_path})
+    prompt_bundle = {
+        "project_name": cfg.project_name,
+        "run_id": run_context.run_id,
+        "prompt": prompt,
+        "model_output": resolved_output,
+        "retrieved_contexts": retrieved_contexts,
+        "adapter": cfg.adapters.model_dump(mode="json"),
+    }
+    store.write_json("prompt_run.json", prompt_bundle)
+    telemetry.log_event("ARTIFACT_WRITTEN", "orchestration", {"artifact": "prompt_run.json"})
+
+    eval_results = run_eval(cfg, run_context.run_id, telemetry=telemetry, config_path=Path(config_path))
+    store.write_json(
+        "eval_results.json",
+        {
+            "run_id": run_context.run_id,
+            "system_context": _artifact_system_context(run_context),
+            "results": [item.model_dump(mode="json") for item in eval_results],
+        },
+    )
+    telemetry.log_event("ARTIFACT_WRITTEN", "eval", {"artifact": "eval_results.json"})
+
+    findings = run_redteam(
+        cfg,
+        telemetry=telemetry,
+        context_overrides={
+            "prompt": prompt,
+            "model_output": resolved_output,
+            "retrieved_contexts": retrieved_contexts,
+        },
+    )
+    finding_payload = [item.model_dump(mode="json") for item in findings]
+    store.write_json(
+        "redteam_findings.json",
+        {
+            "run_id": run_context.run_id,
+            "system_context": _artifact_system_context(run_context),
+            "findings": finding_payload,
+        },
+    )
+    _write_redteam_summary(store, finding_payload)
+    telemetry.log_event("ARTIFACT_WRITTEN", "redteam", {"artifact": "redteam_findings.json"})
+
+    reasoning_md, reasoning_json = generate_reasoning_report(cfg, store)
+    telemetry.log_event("ARTIFACT_WRITTEN", "xai", {"artifact": str(reasoning_md)})
+    telemetry.log_event("ARTIFACT_WRITTEN", "xai", {"artifact": str(reasoning_json)})
+    lineage_md, lineage_json = generate_lineage_artifacts(store)
+    telemetry.log_event("ARTIFACT_WRITTEN", "xai", {"artifact": str(lineage_md)})
+    telemetry.log_event("ARTIFACT_WRITTEN", "xai", {"artifact": str(lineage_json)})
+
+    scorecard = generate_scorecard(cfg, store)
+    telemetry.log_event("ARTIFACT_WRITTEN", "reporting", {"artifact": "scorecard.md"})
+    telemetry.log_event("ARTIFACT_WRITTEN", "reporting", {"artifact": "scorecard.html"})
+
+    monitoring = _monitoring_for_run(store)
+    telemetry.log_event("ARTIFACT_WRITTEN", "monitoring", {"artifact": "monitoring_summary.json"})
+
+    _docs_for_run(cfg, store)
+    telemetry.log_event("ARTIFACT_WRITTEN", "docs", {"artifact": "artifact_manifest.json"})
+
+    incident_opened = _incident_for_run(cfg, store, monitoring)
+    if incident_opened:
+        telemetry.log_event("ARTIFACT_WRITTEN", "incident", {"artifact": "incident_report.md"})
+
+    # Refresh scorecard once docs/monitoring/incident artifacts exist for completeness calculations.
+    scorecard = generate_scorecard(cfg, store)
+    telemetry.log_event(
+        "RUN_FINISHED",
+        "orchestration",
+        {"overall_status": scorecard.overall_status, "go_no_go": scorecard.go_no_go},
+    )
+    return store.run_dir
+
+
 @app.command("init")
 def init() -> None:
     """Create sample config.yaml and suite definitions in current directory."""
@@ -170,6 +265,26 @@ def init() -> None:
         project_name="sample-trusted-ai-project",
         risk_tier="medium",
         eval={"suites": ["medium"]},
+        system={
+            "system_id": "sample-trusted-ai-system",
+            "system_name": "Sample Trusted AI System",
+            "version": "1.0.0",
+            "model_provider": "OpenAI",
+            "model_name": "sample-classifier",
+            "model_version": "2026-03-01",
+            "environment": "staging",
+            "risk_level": "medium",
+            "compliance_profile": "internal",
+            "telemetry_level": "standard",
+            "deployment_region": "us-east-1",
+            "owner": "responsible-ai-team",
+            "metadata": {
+                "intended_use": "Evaluate governance shell and workflows",
+                "limitations": "Synthetic records for demonstration",
+                "change_ticket": "DEMO-100",
+                "data_classification": "internal",
+            },
+        },
         data={
             "dataset_name": "sample_customer_data",
             "source": "local_csv",
@@ -361,86 +476,39 @@ def run_prompt(
     """Run full trusted-AI evidence workflow for one prompt."""
 
     cfg = load_config(config)
-    run_context = _build_run_context(cfg, _resolve_run_id(cfg))
-    store, telemetry = _build_store_and_telemetry(cfg, run_context)
+    run_dir = _run_prompt_workflow(cfg, config, prompt, model_output=model_output, context_file=context_file)
+    console.print(f"Prompt run complete. Artifacts: {run_dir}")
 
-    retrieved_contexts = _load_retrieved_contexts(context_file)
 
-    resolved_output = model_output or (
-        "Stub model response: real provider integration is pending. "
-        "TODO: connect Azure OpenAI or another model endpoint."
-    )
+@app.command("demo")
+def demo(
+    config: str = typer.Option("config.yaml", "--config", help="Path to toolkit config YAML"),
+    prompt: str = typer.Option("Summarize policy controls", "--prompt", help="Demo prompt text"),
+    model_output: Optional[str] = typer.Option(
+        "Stub answer",
+        "--model-output",
+        help="Optional model output text to keep the demo deterministic.",
+    ),
+    open_scorecard: bool = typer.Option(
+        False,
+        "--open-scorecard/--no-open-scorecard",
+        help="Open the generated scorecard HTML in the default browser.",
+    ),
+) -> None:
+    """Initialize (if needed), run a deterministic demo, and surface the scorecard path."""
 
-    telemetry.log_event("RUN_STARTED", "orchestration", {"config": config})
-    prompt_bundle = {
-        "project_name": cfg.project_name,
-        "run_id": run_context.run_id,
-        "prompt": prompt,
-        "model_output": resolved_output,
-        "retrieved_contexts": retrieved_contexts,
-        "adapter": cfg.adapters.model_dump(mode="json"),
-    }
-    store.write_json("prompt_run.json", prompt_bundle)
-    telemetry.log_event("ARTIFACT_WRITTEN", "orchestration", {"artifact": "prompt_run.json"})
+    config_path = Path(config)
+    if not config_path.exists():
+        init()
 
-    eval_results = run_eval(cfg, run_context.run_id, telemetry=telemetry, config_path=Path(config))
-    store.write_json(
-        "eval_results.json",
-        {
-            "run_id": run_context.run_id,
-            "system_context": _artifact_system_context(run_context),
-            "results": [item.model_dump(mode="json") for item in eval_results],
-        },
-    )
-    telemetry.log_event("ARTIFACT_WRITTEN", "eval", {"artifact": "eval_results.json"})
+    cfg = load_config(config)
+    run_dir = _run_prompt_workflow(cfg, config, prompt, model_output=model_output)
+    scorecard_html = run_dir / "scorecard.html"
 
-    findings = run_redteam(
-        cfg,
-        telemetry=telemetry,
-        context_overrides={
-            "prompt": prompt,
-            "model_output": resolved_output,
-            "retrieved_contexts": retrieved_contexts,
-        },
-    )
-    finding_payload = [item.model_dump(mode="json") for item in findings]
-    store.write_json(
-        "redteam_findings.json",
-        {
-            "run_id": run_context.run_id,
-            "system_context": _artifact_system_context(run_context),
-            "findings": finding_payload,
-        },
-    )
-    _write_redteam_summary(store, finding_payload)
-    telemetry.log_event("ARTIFACT_WRITTEN", "redteam", {"artifact": "redteam_findings.json"})
+    if open_scorecard:
+        webbrowser.open(scorecard_html.resolve().as_uri())
 
-    reasoning_md, reasoning_json = generate_reasoning_report(cfg, store)
-    telemetry.log_event("ARTIFACT_WRITTEN", "xai", {"artifact": str(reasoning_md)})
-    telemetry.log_event("ARTIFACT_WRITTEN", "xai", {"artifact": str(reasoning_json)})
-    lineage_md, lineage_json = generate_lineage_artifacts(store)
-    telemetry.log_event("ARTIFACT_WRITTEN", "xai", {"artifact": str(lineage_md)})
-    telemetry.log_event("ARTIFACT_WRITTEN", "xai", {"artifact": str(lineage_json)})
-
-    scorecard = generate_scorecard(cfg, store)
-    telemetry.log_event("ARTIFACT_WRITTEN", "reporting", {"artifact": "scorecard.md"})
-    telemetry.log_event("ARTIFACT_WRITTEN", "reporting", {"artifact": "scorecard.html"})
-
-    monitoring = _monitoring_for_run(store)
-    telemetry.log_event("ARTIFACT_WRITTEN", "monitoring", {"artifact": "monitoring_summary.json"})
-
-    _docs_for_run(cfg, store)
-    telemetry.log_event("ARTIFACT_WRITTEN", "docs", {"artifact": "artifact_manifest.json"})
-
-    incident_opened = _incident_for_run(cfg, store, monitoring)
-    if incident_opened:
-        telemetry.log_event("ARTIFACT_WRITTEN", "incident", {"artifact": "incident_report.md"})
-
-    # Refresh scorecard once docs/monitoring/incident artifacts exist for completeness calculations.
-    scorecard = generate_scorecard(cfg, store)
-    telemetry.log_event("RUN_FINISHED", "orchestration", {"overall_status": scorecard.overall_status, "go_no_go": scorecard.go_no_go})
-
-    console.print(f"Prompt run complete. Artifacts: {store.run_dir}")
+    console.print(f"Demo complete. Scorecard: {scorecard_html}")
 
 
 def main() -> None:

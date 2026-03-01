@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+import webbrowser
 
 from typer.testing import CliRunner
 
@@ -216,5 +217,44 @@ system:
     assert len(expected_hash) == 64
     assert redteam_payload["system_context"]["system_hash"] == expected_hash
     assert scorecard_payload["system_context"]["system_hash"] == expected_hash
+    assert scorecard_payload["pillar_scores"] is not None
+    assert scorecard_payload["trust_score"] is not None
+    assert scorecard_payload["risk_tier"].startswith("Tier")
+    assert scorecard_payload["control_results"]
     assert any(event["system_id"] == "agent-risk-gateway" for event in telemetry_events)
     assert any(event["system_hash"] == expected_hash for event in telemetry_events)
+
+
+def test_demo_bootstraps_config_and_writes_scorecard(tmp_path: Path, monkeypatch) -> None:
+    runner = CliRunner()
+    monkeypatch.chdir(tmp_path)
+
+    result = runner.invoke(app, ["demo"])
+    assert result.exit_code == 0
+    assert (tmp_path / "config.yaml").exists()
+
+    latest = sorted([p for p in (tmp_path / "artifacts").iterdir() if p.is_dir()])[-1]
+    assert (latest / "scorecard.html").exists()
+    scorecard_payload = json.loads((latest / "scorecard.json").read_text(encoding="utf-8"))
+    assert scorecard_payload["trust_score"] is not None
+    assert scorecard_payload["pillar_scores"] is not None
+    assert scorecard_payload["control_results"]
+    assert "Demo complete. Scorecard:" in result.output
+
+
+def test_demo_can_open_scorecard(tmp_path: Path, monkeypatch) -> None:
+    runner = CliRunner()
+    monkeypatch.chdir(tmp_path)
+
+    opened: list[str] = []
+
+    def _fake_open(url: str) -> bool:
+        opened.append(url)
+        return True
+
+    monkeypatch.setattr(webbrowser, "open", _fake_open)
+
+    result = runner.invoke(app, ["demo", "--open-scorecard"])
+    assert result.exit_code == 0
+    assert opened
+    assert opened[0].startswith("file:")

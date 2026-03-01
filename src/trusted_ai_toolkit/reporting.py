@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 from typing import Any
 
+from tat.controls import pillar_scores, risk_tier as controls_risk_tier, run_controls, summarize_redteam, trust_score
 from trusted_ai_toolkit.artifacts import ArtifactStore
 from trusted_ai_toolkit.schemas import MetricResult, RedTeamFinding, Scorecard, ToolkitConfig
 from tat.runtime import build_system_context, compute_system_hash
@@ -84,6 +85,73 @@ def _rai_dimension_status(
     }
 
 
+def _pillar_breakdowns(scorecard: Scorecard) -> dict[str, dict[str, Any]] | None:
+    """Build display-oriented scoring breakdowns for the interactive HTML scorecard."""
+
+    if not scorecard.pillar_scores:
+        return None
+
+    breakdowns: dict[str, dict[str, Any]] = {}
+    for pillar in ("security", "reliability", "transparency", "governance"):
+        pillar_controls = [item for item in scorecard.control_results if item.get("pillar") == pillar]
+        control_total = len(pillar_controls)
+        control_passed = sum(1 for item in pillar_controls if item.get("passed") is True)
+        control_pass_rate = round(control_passed / control_total, 4) if control_total else None
+        pillar_score = scorecard.pillar_scores.get(pillar)
+        trust_weight = 0.25
+
+        breakdown: dict[str, Any] = {
+            "control_total": control_total,
+            "control_passed": control_passed,
+            "control_pass_rate": control_pass_rate,
+            "pillar_score": pillar_score,
+            "trust_weight": trust_weight,
+            "trust_contribution": round((pillar_score or 0.0) * trust_weight, 4) if pillar_score is not None else None,
+            "formula": "Derived from the pillar control pass rate.",
+        }
+
+        if pillar == "security" and "pass_rate" in scorecard.redteam_summary:
+            redteam_pass_rate = float(scorecard.redteam_summary["pass_rate"])
+            breakdown["redteam_pass_rate"] = redteam_pass_rate
+            breakdown["formula"] = (
+                "50% control pass rate + 50% red-team pass rate."
+            )
+        elif pillar != "security":
+            breakdown["formula"] = "100% control pass rate."
+
+        breakdowns[pillar] = breakdown
+
+    return breakdowns
+
+
+def _metric_summary(metric_results: list[MetricResult]) -> dict[str, Any]:
+    """Compute display-friendly metric summary values for the scorecard."""
+
+    total = len(metric_results)
+    passed = sum(1 for metric in metric_results if metric.passed is True)
+    failed = sum(1 for metric in metric_results if metric.passed is False)
+    fairness_metrics = [metric.metric_id for metric in metric_results if metric.metric_id.startswith("fairness_")]
+    return {
+        "total": total,
+        "passed": passed,
+        "failed": failed,
+        "pass_rate": round(passed / total, 4) if total else None,
+        "fairness_metrics": fairness_metrics,
+    }
+
+
+def _artifact_signal(scorecard: Scorecard) -> dict[str, str]:
+    """Compute compact chip labels for live scorecard signals."""
+
+    return {
+        "evidence_label": f"Evidence {round(scorecard.evidence_completeness, 0):.0f}%",
+        "trace_label": "System Trace On" if scorecard.system_context else "System Trace Off",
+        "security_label": f"Critical Fails {str(scorecard.redteam_summary.get('critical_fail_count', 0))}"
+        if "critical_fail_count" in scorecard.redteam_summary
+        else "Critical Fails n/a",
+    }
+
+
 def generate_scorecard(config: ToolkitConfig, store: ArtifactStore) -> Scorecard:
     """Generate and persist scorecard markdown/html artifacts."""
 
@@ -110,6 +178,11 @@ def generate_scorecard(config: ToolkitConfig, store: ArtifactStore) -> Scorecard
     metric_results = _normalize_eval_metrics(eval_payload)
     findings = _normalize_findings(redteam_payload)
     severity_counts = _severity_counts(findings)
+    redteam_summary = summarize_redteam(findings) or severity_counts
+    control_results = run_controls(config.system)
+    computed_pillar_scores = pillar_scores(control_results, redteam_summary if redteam_payload else None)
+    computed_trust_score = trust_score(computed_pillar_scores)
+    computed_risk_tier = controls_risk_tier(control_results)
 
     failing_metrics = [m.metric_id for m in metric_results if m.passed is False]
     high_findings = severity_counts["high"] + severity_counts["critical"]
@@ -122,7 +195,7 @@ def generate_scorecard(config: ToolkitConfig, store: ArtifactStore) -> Scorecard
     if high_findings:
         required_actions.append("Mitigate high/critical red-team findings before deployment.")
     if not required_actions:
-        required_actions.append("No blocking issues in stub checks; proceed to human governance review.")
+        required_actions.append("No blocking issues in deterministic checks; proceed to human governance review.")
 
     stage_gate_status: dict[str, str] = {
         "evaluation": "fail" if failing_metrics else "pass",
@@ -152,13 +225,17 @@ def generate_scorecard(config: ToolkitConfig, store: ArtifactStore) -> Scorecard
     scorecard = Scorecard(
         project_name=config.project_name,
         run_id=store.run_id,
-        risk_tier=config.risk_tier,
+        risk_tier=computed_risk_tier or config.risk_tier,
+        deployment_risk_tier=config.risk_tier,
         overall_status=overall_status,
         go_no_go=go_no_go,
         stage_gate_status=stage_gate_status,
         evidence_completeness=evidence_completeness,
         metric_results=metric_results,
-        redteam_summary=severity_counts,
+        redteam_summary=redteam_summary,
+        pillar_scores=computed_pillar_scores,
+        trust_score=computed_trust_score,
+        control_results=[result.as_dict() for result in control_results],
         required_actions=required_actions,
         system_context=build_system_context(
             config.system,
@@ -182,19 +259,18 @@ def generate_scorecard(config: ToolkitConfig, store: ArtifactStore) -> Scorecard
     )
     context["rai_dimensions"] = _rai_dimension_status(metric_results, severity_counts, reasoning_path.exists())
     context["control_checks"] = [
-        {"control": "Defined Intended Use", "status": "Yes"},
-        {"control": "Documented Limitations", "status": "Yes"},
-        {"control": "Evaluation Thresholds Defined", "status": "Yes" if metric_results else "No"},
-        {
-            "control": "Red-Team Security Testing Completed",
-            "status": "Yes" if findings else "No",
-        },
-        {
-            "control": "Explainability Report Available",
-            "status": "Yes" if reasoning_path.exists() else "No",
-        },
-        {"control": "Human Sign-Off Recorded", "status": "Pending"},
+        {"control": item["control_id"], "status": "Yes" if item["passed"] else "No"}
+        for item in scorecard.control_results
     ]
+    context["artifact_presence"] = {
+        "eval_results": eval_path.exists(),
+        "redteam_findings": redteam_path.exists(),
+        "reasoning_report": reasoning_path.exists(),
+    }
+    context["metric_summary"] = _metric_summary(metric_results)
+    context["pillar_breakdowns"] = _pillar_breakdowns(scorecard)
+    context["artifact_signal"] = _artifact_signal(scorecard)
+    context["trust_score_pct"] = round(scorecard.trust_score * 100.0, 0) if scorecard.trust_score is not None else None
     context["severity_threshold"] = config.redteam.severity_threshold
     context["go_no_go"] = go_no_go
     context["stage_gate_status"] = stage_gate_status

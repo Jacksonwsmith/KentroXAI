@@ -252,13 +252,17 @@ class Scorecard(BaseModel):
 
     project_name: str
     run_id: str
-    risk_tier: Literal["low", "medium", "high"]
+    risk_tier: Literal["low", "medium", "high", "Tier 1", "Tier 2", "Tier 3"]
+    deployment_risk_tier: Literal["low", "medium", "high"] | None = None
     overall_status: Literal["pass", "fail", "needs_review"]
     go_no_go: Literal["go", "no-go"]
     stage_gate_status: dict[str, Literal["pass", "needs_review", "fail"]] = Field(default_factory=dict)
     evidence_completeness: float = 0.0
     metric_results: list[MetricResult] = Field(default_factory=list)
-    redteam_summary: dict[str, int] = Field(default_factory=dict)
+    redteam_summary: dict[str, Any] = Field(default_factory=dict)
+    pillar_scores: dict[str, float] | None = None
+    trust_score: float | None = None
+    control_results: list[dict[str, Any]] = Field(default_factory=list)
     required_actions: list[str] = Field(default_factory=list)
     system_context: dict[str, str] | None = None
     artifact_links: dict[str, str] = Field(default_factory=dict)

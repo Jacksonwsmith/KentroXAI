@@ -1,6 +1,7 @@
 project_name: sample-trusted-ai-project
 risk_tier: medium
 output_dir: artifacts
+system: null
 data:
   dataset_name: sample_customer_data
   source: local_csv
