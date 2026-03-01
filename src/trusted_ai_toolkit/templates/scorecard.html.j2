@@ -134,6 +134,113 @@
       gap: 12px;
     }
 
+    .score-details {
+      margin: 0;
+    }
+
+    .score-details summary {
+      list-style: none;
+    }
+
+    .score-details summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .ring-toggle {
+      cursor: pointer;
+      user-select: none;
+      transition: transform 0.16s ease, box-shadow 0.16s ease;
+    }
+
+    .ring-toggle:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(43, 100, 223, 0.12);
+    }
+
+    .ring-note {
+      margin: 8px 0 0;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--muted);
+      text-align: center;
+    }
+
+    .score-breakdown {
+      margin-top: 10px;
+      padding: 12px 14px;
+      border-radius: 18px;
+      border: 1px solid #d3d8e4;
+      background: #eef3ff;
+    }
+
+    .score-breakdown h3 {
+      margin: 0 0 6px;
+      font-size: 16px;
+      font-weight: 900;
+      letter-spacing: -0.2px;
+    }
+
+    .score-breakdown ul {
+      margin: 0;
+      padding-left: 18px;
+    }
+
+    .score-breakdown li {
+      font-size: 13px;
+      line-height: 1.45;
+      color: #253042;
+    }
+
+    .score-breakdown .breakdown-note {
+      margin: 0 0 8px;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--muted);
+    }
+
+    .pillar-detail {
+      margin: 6px 0;
+      border: 1px solid #d4daea;
+      border-radius: 12px;
+      background: #f8faff;
+      overflow: hidden;
+    }
+
+    .pillar-summary {
+      cursor: pointer;
+      padding: 8px 10px;
+      font-size: 13px;
+      font-weight: 800;
+      list-style: none;
+    }
+
+    .pillar-summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .pillar-summary::after {
+      content: "Expand";
+      float: right;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--muted);
+    }
+
+    .pillar-detail[open] .pillar-summary::after {
+      content: "Collapse";
+    }
+
+    .pillar-meta {
+      margin: 0;
+      padding: 0 12px 10px 28px;
+    }
+
+    .pillar-meta li {
+      font-size: 12px;
+      line-height: 1.45;
+      color: #314057;
+    }
+
     .ring {
       width: 200px;
       height: 200px;
@@ -197,10 +304,15 @@
     }
 
     .review-note {
-      font-size: 13px;
-      color: #3b4352;
-      font-weight: 600;
-      margin: 0;
+      font-size: 15px;
+      color: #991b1b;
+      font-weight: 900;
+      margin: 4px 0 0;
+      padding: 10px 12px;
+      border-radius: 12px;
+      background: #fee2e2;
+      border: 1px solid #fca5a5;
+      line-height: 1.35;
     }
 
     .sections h3 {
@@ -274,7 +386,7 @@
       .ring .label { font-size: 17px; }
       .tier-label, .minor-label { font-size: 13px; }
       .tier-value, .minor-value { font-size: 20px; }
-      .review-note { font-size: 12px; }
+      .review-note { font-size: 14px; }
       .sections h3 { font-size: 20px; }
       .sections li { font-size: 13px; }
       .btn { font-size: 12px; min-width: 116px; }
@@ -299,7 +411,7 @@
       .tier-box { flex: 1; min-width: 220px; min-height: unset; }
       .tier-label, .minor-label { font-size: 13px; }
       .tier-value, .minor-value { font-size: 23px; }
-      .review-note { font-size: 13px; }
+      .review-note { font-size: 14px; }
       .sections h3 { font-size: 24px; }
       .sections li { font-size: 15px; }
       .actions { flex-direction: column; align-items: stretch; }
@@ -317,16 +429,9 @@
     {% endif %}
   {% endfor %}
 
-  {% set blocker_count = redteam_summary.high + redteam_summary.critical + ns.failed_metrics %}
-  {% set trust_score = 92 - (blocker_count * 9) - ((100 - evidence_completeness) / 4) %}
-  {% if trust_score < 35 %}
-    {% set trust_score = 35 %}
-  {% elif trust_score > 96 %}
-    {% set trust_score = 96 %}
-  {% endif %}
-
   {% set citation_pct = "%.0f"|format(evidence_completeness) %}
-  {% set pedigree = risk_tier | upper %}
+  {% set display_risk_tier = deployment_risk_tier or risk_tier %}
+  {% set pedigree = display_risk_tier | upper %}
   {% if overall_status == "pass" %}
     {% set policy_text = "Policy PASS" %}
   {% elif overall_status == "fail" %}
@@ -350,24 +455,60 @@
 
       <div class="chips">
         <span class="chip pass">{{ policy_text }}</span>
-        <span class="chip blue">Cited {{ citation_pct }}%</span>
+        <span class="chip blue">{{ artifact_signal.evidence_label }}</span>
         <span class="chip purple">Pedigree {{ pedigree }}</span>
-        <span class="chip amber">Trace Captured</span>
-        <span class="chip sky">GCC High Boundary</span>
+        <span class="chip amber">{{ artifact_signal.trace_label }}</span>
+        <span class="chip sky">{{ artifact_signal.security_label }}</span>
       </div>
 
       <div class="layout">
         <div class="score-wrap">
-          <div class="ring">
-            <p class="num">{{ "%.0f"|format(trust_score) }}</p>
-            <p class="label">Trust Score</p>
-          </div>
+          <details class="score-details">
+            <summary>
+              <div class="ring ring-toggle">
+                <p class="num">{{ trust_score_pct if trust_score_pct is not none else "N/A" }}</p>
+                <p class="label">Trust Score</p>
+              </div>
+              <p class="ring-note">Click for pillar breakdown</p>
+            </summary>
+            <div class="score-breakdown">
+              <h3>Pillar Breakdown</h3>
+              <p class="breakdown-note">Click each pillar to see the formula, weighting, and trust-score contribution.</p>
+              <div>
+                {% if pillar_breakdowns %}
+                {% for pillar_name, breakdown in pillar_breakdowns.items() %}
+                <details class="pillar-detail">
+                  <summary class="pillar-summary">{{ pillar_name | title }}: {{ breakdown.pillar_score }}</summary>
+                  <ul class="pillar-meta">
+                    <li>Controls passed: {{ breakdown.control_passed }}/{{ breakdown.control_total }}</li>
+                    <li>Control pass rate: {{ breakdown.control_pass_rate }}</li>
+                    {% if breakdown.redteam_pass_rate is defined %}
+                    <li>Red-team pass rate: {{ breakdown.redteam_pass_rate }}</li>
+                    {% endif %}
+                    <li>Formula: {{ breakdown.formula }}</li>
+                    <li>Pillar score: {{ breakdown.pillar_score }}</li>
+                    <li>Trust score weight: {{ breakdown.trust_weight }}</li>
+                    <li>Weighted contribution to trust score: {{ breakdown.trust_contribution }}</li>
+                  </ul>
+                </details>
+                {% endfor %}
+                {% else %}
+                <ul>
+                  <li>Pillar scores are not available for this run.</li>
+                </ul>
+                {% endif %}
+              </div>
+            </div>
+          </details>
 
           <div class="tier-box">
             <p class="tier-label">Risk Tier</p>
-            <p class="tier-value">{{ risk_tier | upper }}</p>
+            <p class="tier-value">{{ display_risk_tier | upper }}</p>
 
-            <p class="minor-label">Confidence</p>
+            <p class="minor-label">Decision Tier</p>
+            <p class="minor-value">{{ risk_tier }}</p>
+
+            <p class="minor-label">Review Status</p>
             <p class="minor-value">{{ overall_status | replace("_", " ") | title }}</p>
 
             <p class="review-note">Human review required before release.</p>
@@ -378,9 +519,10 @@
           <div>
             <h3>Explainability</h3>
             <ul>
-              <li>Metrics captured: {{ metric_results | length }} checks ({{ citation_pct }}% evidence coverage).</li>
-              <li>Fairness snapshot includes SPD, DIR, EOD, and AOD alignment checks.</li>
-              <li>Reasoning evidence available via `reasoning_report` artifact.</li>
+              <li>Metrics captured: {{ metric_summary.total }} total, {{ metric_summary.passed }} passed, {{ metric_summary.failed }} failed.</li>
+              <li>Metric pass rate: {{ metric_summary.pass_rate if metric_summary.pass_rate is not none else "N/A" }} with {{ citation_pct }}% evidence coverage.</li>
+              <li>Fairness metrics detected: {{ metric_summary.fairness_metrics | join(", ") if metric_summary.fairness_metrics else "none" }}.</li>
+              <li>Reasoning evidence available: {{ "Yes" if artifact_presence.reasoning_report else "No" }}.</li>
             </ul>
           </div>
 
@@ -388,8 +530,9 @@
             <h3>Traceability</h3>
             <ul>
               <li>Run ID: {{ run_id }} | Project: {{ project_name }}</li>
+              <li>Decision tier: {{ risk_tier }} with deployment tier {{ display_risk_tier | upper }}.</li>
               <li>Stage gates: {% for gate, status in stage_gate_status.items() %}{{ gate | replace("_", " ") | title }}={{ status | upper }}{% if not loop.last %}; {% endif %}{% endfor %}</li>
-              <li>Evidence links: eval, red-team findings, reasoning report included.</li>
+              <li>Artifacts present: eval={{ "yes" if artifact_presence.eval_results else "no" }}, red-team={{ "yes" if artifact_presence.redteam_findings else "no" }}, reasoning={{ "yes" if artifact_presence.reasoning_report else "no" }}.</li>
             </ul>
           </div>
 
@@ -409,6 +552,20 @@
               <li>{{ action }}</li>
               {% endfor %}
               <li>Documentation completeness: {{ "%.1f"|format(evidence_completeness) }}% of required outputs.</li>
+            </ul>
+          </div>
+
+          <div>
+            <h3>Pillar Scores</h3>
+            <ul>
+              {% if pillar_scores %}
+              <li>Security: {{ pillar_scores.security }}</li>
+              <li>Reliability: {{ pillar_scores.reliability }}</li>
+              <li>Transparency: {{ pillar_scores.transparency }}</li>
+              <li>Governance: {{ pillar_scores.governance }}</li>
+              {% else %}
+              <li>Not available for this run.</li>
+              {% endif %}
             </ul>
           </div>
         </div>

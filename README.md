@@ -35,11 +35,20 @@ tat init
 tat run prompt --config config.yaml --prompt "Summarize the policy update."
 ```
 
+```bash
+tat demo
+```
+
+`tat demo` runs the full end-to-end toolkit workflow in one command: it initializes `config.yaml` if needed, executes evaluation, red-team, explainability, reporting, monitoring, documentation, and incident checks, then prints the generated scorecard path. Use `tat demo --open-scorecard` to open the HTML scorecard automatically.
 
 
 ## Core Commands
 
 ```bash
+# (Don't paste this comment in terminal)One-command end-to-end demo
+tat demo
+tat demo --open-scorecard
+
 # (Don't paste this comment in terminal)Primary end-to-end run
 tat run prompt --config config.yaml --prompt "Summarize policy controls" --model-output "Stub answer"
 

@@ -1,8 +1,11 @@
 # Trusted AI Scorecard
 
+{% set display_risk_tier = deployment_risk_tier or risk_tier %}
+
 **Project:** {{ project_name }}  
 **Run ID:** {{ run_id }}  
-**Risk Tier:** {{ risk_tier | title }}  
+**Risk Tier:** {{ display_risk_tier | title }}  
+**Decision Tier:** {{ risk_tier }}  
 **Overall Status:** {{ overall_status | replace("_", " ") | title }}  
 **Go/No-Go:** {{ go_no_go | upper }}
 
@@ -21,6 +24,17 @@
 
 - Completeness: {{ evidence_completeness }}%
 - Required Outputs: {{ required_outputs | length }}
+
+## Pillar Scores
+
+{% if pillar_scores %}
+- Security: {{ pillar_scores.security }}
+- Reliability: {{ pillar_scores.reliability }}
+- Transparency: {{ pillar_scores.transparency }}
+- Governance: {{ pillar_scores.governance }}
+{% else %}
+- Not available
+{% endif %}
 
 ## Responsible AI Dimension Status
 
