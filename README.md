@@ -27,6 +27,10 @@ pip install -e .
 ```
 
 ```bash
+pytest
+```
+
+```bash
 tat init
 tat run prompt --config config.yaml --prompt "Summarize the policy update."
 ```
@@ -79,6 +83,20 @@ Example execution:
 tat redteam run --config tests/redteam/configs/config_rt01.yaml
 tat redteam run --config tests/redteam/configs/config_rt03.yaml
 
+## Red-Team & Monitoring Vertical Slice
+
+A configuration-driven red-team vertical slice has been implemented under:
+
+`tests/redteam/`
+
+This demonstrates deterministic adversarial validation, artifact persistence, and telemetry instrumentation.
+
+Example execution:
+
+```bash
+tat redteam run --config config_rt01.yaml
+tat redteam run --config config_rt03.yaml
+
 ## Notes
 
 - No external APIs are required for v0.
@@ -86,3 +104,4 @@ tat redteam run --config tests/redteam/configs/config_rt03.yaml
 - Golden suites include 50+ deterministic test cases across low, medium, and high tiers.
 - Red-team suite includes 20 deterministic security cases.
 - This repository is public-facing and designed to allow referenced inspiration patterns with explicit attribution.
+- Pytest disables its built-in `debugging` plugin by default because that plugin can crash under some Python 3.13 environments; for local troubleshooting, re-enable it explicitly with `pytest -p debugging`.
