@@ -754,39 +754,40 @@
                     <div class="gate-body">
                       {% if gate == "evaluation" %}
                       <p>The evaluation gate fails when one or more configured metrics do not meet their thresholds.</p>
-                      <pre class="gate-code">failing_metric_count = {{ metric_summary.failed }}
-evaluation = "fail" if failing_metric_count &gt; 0 else "pass"
+                      <pre class="gate-code">Evaluation failed because {{ metric_summary.failed }} required metric{% if metric_summary.failed != 1 %}s{% endif %} missed {% if metric_summary.failed == 1 %}its{% else %}their{% endif %} threshold{% if metric_summary.failed != 1 %}s{% endif %}.
+{% for metric in metric_results %}
+{% if metric.passed is sameas false %}
+- {{ metric.metric_id }}: {{ "%.3f"|format(metric.value) }} (required: {{ "%.3f"|format(metric.threshold) }})
+{% endif %}
+{% endfor %}
 
-{{ metric_summary.failed }} &gt; 0 -> {{ status | upper }}</pre>
+Rule: any failed required metric causes the evaluation gate to fail.</pre>
                       {% elif gate == "redteam" %}
                       <p>The red-team gate fails when blocker-level findings are present for this risk tier, or when red-team evidence is required but missing.</p>
-                      <pre class="gate-code">high_findings = redteam_summary["high"] + redteam_summary["critical"]
-require_redteam = {{ "true" if redteam_gate_rules.require_redteam else "false" }}
-block_on_high_severity = {{ "true" if redteam_gate_rules.block_on_high_severity else "false" }}
-total_findings = {{ redteam_summary.total_findings if redteam_summary.total_findings is defined else (redteam_summary.low + redteam_summary.medium + redteam_summary.high + redteam_summary.critical) }}
+                      <pre class="gate-code">Red-team failed because {{ redteam_summary.high + redteam_summary.critical }} blocker finding{% if (redteam_summary.high + redteam_summary.critical) != 1 %}s{% endif %} were found.
 
-redteam = "needs_review" if high_findings else "pass"
-if require_redteam and total_findings == 0:
-    redteam = "fail"
-if block_on_high_severity and high_findings &gt; 0:
-    redteam = "fail"
+Severity breakdown:
+- High: {{ redteam_summary.high }}
+- Critical: {{ redteam_summary.critical }}
+- Medium: {{ redteam_summary.medium }}
+- Low: {{ redteam_summary.low }}
 
-high_findings = {{ redteam_summary.high }} + {{ redteam_summary.critical }} = {{ redteam_summary.high + redteam_summary.critical }}
-require_redteam = {{ "true" if redteam_gate_rules.require_redteam else "false" }}, total_findings = {{ redteam_summary.total_findings if redteam_summary.total_findings is defined else (redteam_summary.low + redteam_summary.medium + redteam_summary.high + redteam_summary.critical) }}
-block_on_high_severity = {{ "true" if redteam_gate_rules.block_on_high_severity else "false" }}
+Policy for this risk level:
+- Red-team evidence required: {{ "Yes" if redteam_gate_rules.require_redteam else "No" }}
+- High-severity findings block review: {{ "Yes" if redteam_gate_rules.block_on_high_severity else "No" }}
 
-{{ "true" if redteam_gate_rules.block_on_high_severity else "false" }} and {{ redteam_summary.high + redteam_summary.critical }} &gt; 0 -> {{ status | upper }}</pre>
+Rule: if required red-team evidence is missing, or any blocker finding is present, the red-team gate fails.</pre>
                       {% elif gate == "documentation" %}
                       <p>The documentation gate fails review when the evidence pack is incomplete.</p>
-                      <pre class="gate-code">documentation = "pass" if evidence_completeness &gt;= 90 else "needs_review"
+                      <pre class="gate-code">Documentation needs review because the evidence pack is {{ "%.0f"|format(evidence_completeness) }}% complete.
 
-{{ "%.0f"|format(evidence_completeness) }} &gt;= 90 -> {{ status | upper }}</pre>
+Rule: the evidence pack must be at least 90% complete to pass this gate.</pre>
                       {% elif gate == "monitoring" %}
                       <p>The monitoring gate reflects whether required monitoring evidence is available for the run.</p>
-                      <pre class="gate-code">monitoring = "pass"</pre>
+                      <pre class="gate-code">Monitoring passed because the required monitoring artifact was present for this run.</pre>
                       {% else %}
                       <p>This gate is controlled by the stage-gate policy for the current risk tier.</p>
-                      <pre class="gate-code">{{ gate }} = "{{ status }}"</pre>
+                      <pre class="gate-code">{{ gate | replace("_", " ") | title }} is controlled by the governance policy for this risk tier and is currently {{ status | upper }}.</pre>
                       {% endif %}
                     </div>
                   </details>
