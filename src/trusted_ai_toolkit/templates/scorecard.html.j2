@@ -711,11 +711,11 @@
       </div>
 
       <div class="chips">
-        <span class="chip pass hint" title="This is the governance gate outcome. It tells you whether the required checks passed, are blocked, or still need review.">{{ policy_text }}</span>
-        <span class="chip blue hint" title="This shows how complete the evidence pack is compared with the list of required artifacts for this run.">{{ artifact_signal.evidence_label }}</span>
-        <span class="chip purple hint" title="Configured risk is the declared risk level for this use case. It is set in configuration and does not change based on the score.">Configured Risk {{ pedigree }}</span>
-        <span class="chip amber hint" title="Traceability shows whether this run includes system context and telemetry fields that let you trace the result back to a specific governed system.">{{ artifact_signal.trace_label }}</span>
-        <span class="chip sky hint" title="Blocker findings are the red-team findings severe enough to stop release at the current threshold, which means high and critical in this demo.">{{ artifact_signal.security_label }}</span>
+        <span class="chip pass hint" title="This is the overall review outcome for the required governance checks.">{{ policy_text }}</span>
+        <span class="chip blue hint" title="This shows how much of the required evidence was produced for this run.">{{ artifact_signal.evidence_label }}</span>
+        <span class="chip purple hint" title="This is the preset risk level for the use case. It comes from configuration, not from the trust score.">Configured Risk {{ pedigree }}</span>
+        <span class="chip amber hint" title="This shows whether the run includes enough metadata to trace the result back to a specific system and run context.">{{ artifact_signal.trace_label }}</span>
+        <span class="chip sky hint" title="This is the count of serious red-team findings for this run. In this demo, that means high and critical findings.">{{ artifact_signal.security_label }}</span>
       </div>
 
       <div class="layout">
@@ -724,24 +724,24 @@
             <p class="num">{{ card_score.display_score_pct if card_score.display_score_pct is not none else "N/A" }}</p>
             <p class="label">{{ card_score.label }}</p>
           </div>
-          <p class="ring-note hint" title="The trust score is built from the baseline trust inputs shown in the panel to the right.">This score reflects confidence in this answer.</p>
+          <p class="ring-note hint" title="This score summarizes how trustworthy this answer appears based on the checks shown in the card.">This score reflects confidence in this answer.</p>
           <div class="score-sidecard">
             <div class="mini-section">
-              <p class="tier-label hint" title="Deployment risk is the declared risk category for the system or use case. It is chosen in configuration and represents the intended operating context.">Deployment Risk</p>
+              <p class="tier-label hint" title="This is the declared risk level for the system or use case. It describes the intended operating context.">Deployment Risk</p>
               <p class="tier-value">{{ display_risk_tier | title }}</p>
 
-              <p class="minor-label hint" title="Control tier is derived from the worst failed control severity. Tier 1 is best, Tier 3 is worst.">Control Tier</p>
+              <p class="minor-label hint" title="This tier summarizes the control posture. Tier 1 is strongest, and higher tiers indicate more serious control failures.">Control Tier</p>
               <p class="minor-value">{{ risk_tier }}</p>
             </div>
 
             <div class="mini-section">
-              <p class="minor-label hint" title="Decision status is the final governance outcome for this run: pass, needs review, or fail. It is separate from the trust score.">Decision Status</p>
+              <p class="minor-label hint" title="This is the final governance review result for the run. It is separate from the trust score.">Decision Status</p>
               <p class="minor-value">{{ overall_status | replace("_", " ") | title }}</p>
 
               <p class="review-note{% if overall_status == "pass" %} pass{% elif overall_status == "needs_review" %} review{% endif %}">{{ card_score.status_note }}</p>
               {% if gate_ns.blocking_gates %}
               <div class="gate-alert">
-                <p class="gate-alert-title hint" title="Blocking gates are the specific stage checks that failed and caused the release to be blocked.">Blocking Gates</p>
+                <p class="gate-alert-title hint" title="These are the specific governance checks that failed and caused the review to be blocked.">Blocking Gates</p>
                 <div class="gate-list">
                   {% for gate_name in gate_ns.blocking_gates %}
                   <span class="gate-chip">{{ gate_name }}</span>
